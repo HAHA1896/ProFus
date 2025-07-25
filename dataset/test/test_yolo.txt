@@ -1,1 +1,0 @@
-/disk16t/ycj/yolov10_research/dataset/test/camera/192.168.1.88_01_20240716180642506.jpg
