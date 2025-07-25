@@ -1,0 +1,54 @@
+# Parameters
+nc: 9 # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
+  # [depth, width, max_channels]
+  s: [0.33, 0.50, 1024]
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [64, 3, 2]] # 0-P1/2      0
+  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4     1
+  - [-1, 3, C2f, [128, True]] #  2          2
+  - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8     3
+  - [-1, 6, C2f, [256, True]] # 4           4
+  - [-1, 1, SCDown, [512, 3, 2]] # 5-P4/16  5
+  - [-1, 6, C2f, [512, True]] # 6           6
+  - [-1, 1, SCDown, [1024, 3, 2]] # 7-P5/32 7
+  - [-1, 3, C2fCIB, [1024, True, True]] # 8 8
+  - [-1, 1, SPPF, [1024, 5]] # 9            9
+  - [-1, 1, PSA, [1024]] # 10               10
+
+# radar
+  - [-1, 1, Conv, [32, 3, 2]] # 0-P1/2     11
+  - [-1, 1, Conv, [64, 3, 2]] # 1-P2/4     12
+  - [-1, 3, C2f, [64, True]] #  2          13
+  - [-1, 1, Conv, [128, 3, 2]] # 3-P3/8    14
+  - [-1, 6, C2f, [128, True]] # 4          15
+  - [[-1, 4], 1, RVFF, [256]] # new        16
+  - [-2, 1, SCDown, [256, 3, 2]] # 5-P4/16 17
+  - [-1, 6, C2f, [256, True]] # 6          18
+  - [[-1, 6], 1, RVFF, [512]] # new        19
+  - [-2, 1, SCDown, [512, 3, 2]] # 7-P5/32 20
+  - [-1, 3, C2fCIB, [512, True, True]] # 8 21
+  - [-1, 1, SPPF, [512, 5]] # 9            22
+  - [-1, 1, PSA, [512]] # 10               23
+  - [[-1, 10], 1, RVFF, [1024]] # new       24
+
+# YOLOv8.0n head
+head:
+  - [10, 1, nn.Upsample, [None, 2, "nearest"]]    # 25
+  - [[-1, 19], 1, Concat, [1]] # cat backbone P4    26
+  - [-1, 3, C2f, [512]] # 13                        27
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]    # 28
+  - [[-1, 16], 1, Concat, [1]] # cat backbone P3    29
+  - [-1, 3, C2f, [256]] # 16 (P3/8-small)           30
+
+  - [-1, 1, Conv, [256, 3, 2]] #                    31
+  - [[-1, 27], 1, Concat, [1]] # cat head P4        32
+  - [-1, 3, C2f, [512]] # 19 (P4/16-medium)         33
+  - [-1, 1, SCDown, [512, 3, 2]] #                  34
+  - [[-1, 24], 1, Concat, [1]] # cat head P5        35
+  - [-1, 3, C2fCIB, [1024, True, True]] # 22 (P5/32-large)    36
+
+  - [[30, 33, 36], 1, v10Detect, [nc]] # Detect(P3, P4, P5)   37
